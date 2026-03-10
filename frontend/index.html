@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0b1220" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="stylesheet" href="/styles.css" />
+    <title>CrowdSafe Map</title>
+
+    <!-- Leaflet (no build step) -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+      defer
+    ></script>
+    <!-- Leaflet.heat -->
+    <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js" defer></script>
+
+    <script src="/config.js" defer></script>
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <div class="app">
+      <div class="topbar" role="region" aria-label="Search and controls">
+        <div class="search" role="search">
+          <input id="searchInput" type="search" placeholder="Search places (temple, bus stand, stadium…)" aria-label="Search location" />
+        </div>
+        <button class="btn primary" id="locBtn" aria-label="Center on my location">My location</button>
+      </div>
+
+      <div id="map" role="application" aria-label="Crowd density map"></div>
+
+      <div class="panel">
+        <div class="card legend" aria-label="Crowd legend">
+          <span><span class="dot safe"></span>Green: Low</span>
+          <span><span class="dot warn"></span>Yellow: Moderate</span>
+          <span><span class="dot danger"></span>Red: High</span>
+        </div>
+
+        <div class="card status" aria-live="polite">
+          <div>Status: <strong id="statusText">Starting…</strong></div>
+          <div>Nearby risk: <strong id="riskText">Unknown</strong></div>
+        </div>
+
+        <div class="card a11y" aria-label="Accessibility controls">
+          <button class="btn" id="contrastBtn">High contrast</button>
+          <button class="btn" id="textBtn">Large text</button>
+          <button class="btn danger" id="sosBtn" aria-label="Emergency reporting button">Report emergency</button>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
