@@ -22,6 +22,7 @@
   const eventsListEl = document.getElementById("eventsList");
 
   let lastSnap = null;
+  const resolvedSosIds = new Set(); // Track locally resolved SOS IDs
 
   const draw = (snap) => {
     lastSnap = snap;
@@ -79,7 +80,7 @@
 
     const currentSosIds = new Set();
     for (const sos of snap.sosAlerts || []) {
-      if (!sos.resolved) {
+      if (!sos.resolved && !resolvedSosIds.has(sos.sosId)) {
         currentSosIds.add(sos.sosId);
         
         L.circleMarker([sos.lat, sos.lon], {
@@ -218,7 +219,9 @@
   };
 
   window.resolveSos = async (sosId) => {
-    // Remove the popup and map marker immediately for instant feedback
+    // Track as resolved locally so WebSocket broadcasts don't re-draw this marker
+    resolvedSosIds.add(sosId);
+    // Immediately remove the popup and map marker for instant feedback
     const popEl = document.getElementById(`sos-pop-${sosId}`);
     if (popEl) popEl.remove();
     sosLayer.clearLayers();
