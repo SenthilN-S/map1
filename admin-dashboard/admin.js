@@ -218,10 +218,14 @@
   };
 
   window.resolveSos = async (sosId) => {
+    // Remove the popup and map marker immediately for instant feedback
+    const popEl = document.getElementById(`sos-pop-${sosId}`);
+    if (popEl) popEl.remove();
+    sosLayer.clearLayers();
     try {
       await fetch(`${CFG.API_BASE}/sos/${sosId}/resolve`, { method: "POST" });
     } catch {
-      alert("Failed to resolve SOS.");
+      alert("Failed to resolve SOS. Please try again.");
     }
   };
 
