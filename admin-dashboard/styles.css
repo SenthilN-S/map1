@@ -176,5 +176,47 @@ body.large-text .search input{font-size:18px;}
 .status-badge.pending { background: rgba(255,204,0,0.2); color: #ffcc00; }
 .status-badge.approved { background: rgba(52,199,89,0.2); color: #34c759; }
 .status-badge.declined { background: rgba(255,59,48,0.2); color: #ff3b30; }
-.status-badge.active-sos { background: rgba(255,59,48,0.2); color: #ff3b30; animation: sosPulse 1s infinite alternate; }
 .status-badge.resolved { background: rgba(52,199,89,0.2); color: #34c759; }
+
+/* Mobile Optimization */
+@media (max-width: 768px) {
+  .topbar {
+    top: 5px; left: 5px; right: 5px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .topbar .card {
+    width: 100%;
+    order: 1;
+    padding: 8px;
+  }
+  .topbar .card div:first-child { min-width: auto !important; }
+  #historyBtn { order: 2; flex: 1; }
+  #fitBtn { order: 3; flex: 1; }
+
+  .history-drawer {
+    width: 100%;
+    right: -100%;
+  }
+
+  /* Move events panel for mobile */
+  .events-panel {
+    top: auto;
+    bottom: 70px;
+    left: 10px;
+    right: 10px;
+    width: auto;
+    max-height: 40%;
+    background: var(--panel);
+  }
+
+  .panel {
+    bottom: 5px; left: 5px; right: 5px;
+    gap: 5px;
+  }
+  .panel .card { padding: 6px 10px; font-size: 11px; flex: 1; }
+  .panel .a11y { display: none; } /* Hide a11y on mobile to save space */
+  
+  .sos-popup { padding: 12px; }
+  .sos-popup h3 { font-size: 16px; }
+}
