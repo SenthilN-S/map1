@@ -55,13 +55,13 @@
 
     for (const i of snap.incidents || []) {
       L.circleMarker([i.lat, i.lon], {
-        radius: 8,
-        color: "#ffffff",
+        radius: 7,
+        color: "#ff9500",
         weight: 2,
-        fillColor: "#ff3b30",
-        fillOpacity: 0.95,
+        fillColor: "#ff9500",
+        fillOpacity: 0.85,
       }).bindPopup(
-        `<div style="font-weight:700">INCIDENT</div><div style="opacity:.9">${(i.message || "").replaceAll("<","&lt;")}</div><div style="opacity:.7;font-size:12px">${new Date(i.ts).toLocaleString()}</div>`
+        `<div style="font-weight:700; color:#ff9500">⚠️ INCIDENT</div><div style="opacity:.9">${(i.message || "").replaceAll("<","&lt;")}</div><div style="opacity:.7;font-size:12px">${new Date(i.ts).toLocaleString()}</div>`
       ).addTo(incidents);
     }
 
@@ -175,6 +175,15 @@
   });
 
   document.getElementById("applyBtn").addEventListener("click", applyConfig);
+
+  document.getElementById("clearIncBtn").addEventListener("click", async () => {
+    if (!confirm("Clear all incident markers from the map?")) return;
+    try {
+      await fetch(`${CFG.API_BASE}/incidents`, { method: "DELETE" });
+    } catch {
+      alert("Failed to clear incidents.");
+    }
+  });
 
   const loadEvents = async () => {
     try {

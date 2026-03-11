@@ -147,6 +147,15 @@ async def report(incident: IncidentReport) -> dict[str, Any]:
     return {"ok": True}
 
 
+@app.delete("/incidents")
+async def clear_incidents() -> dict[str, Any]:
+    await store.clear_incidents()
+    devices, incidents, approved_events, active_sos = await store.snapshot()
+    snap = build_snapshot(devices, incidents, approved_events, active_sos)
+    await hub.broadcast({"type": "snapshot", "data": snap.model_dump()})
+    return {"ok": True}
+
+
 @app.post("/events")
 async def create_event(req: EventRequestCreate) -> dict[str, Any]:
     event_id = str(uuid.uuid4())

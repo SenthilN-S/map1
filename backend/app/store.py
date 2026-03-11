@@ -36,6 +36,10 @@ class InMemoryStore:
             if len(self._incidents) > 500:
                 self._incidents = self._incidents[-500:]
 
+    async def clear_incidents(self) -> None:
+        async with self._lock:
+            self._incidents = []
+
     async def snapshot(self) -> tuple[dict[str, DeviceState], list[dict], list[dict], list[dict]]:
         async with self._lock:
             active_sos = [a for a in self._sos_alerts.values() if not a.get("resolved", False)]
