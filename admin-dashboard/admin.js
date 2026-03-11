@@ -6,6 +6,7 @@
   const incEl = document.getElementById("incText");
   const yellowInput = document.getElementById("yellowInput");
   const redInput = document.getElementById("redInput");
+  const cellInput = document.getElementById("cellInput");
   const cfgText = document.getElementById("cfgText");
 
   const map = L.map("map", { 
@@ -184,7 +185,8 @@
       const c = await res.json();
       yellowInput.value = String(c.yellowMinCount ?? 3);
       redInput.value = String(c.redMinCount ?? 6);
-      cfgText.textContent = `Yellow ≥ ${yellowInput.value}, Red ≥ ${redInput.value}`;
+      cellInput.value = String(c.cellSizeM ?? 10);
+      cfgText.textContent = `Yellow ≥ ${yellowInput.value}, Red ≥ ${redInput.value}, Cell: ${cellInput.value}m`;
     } catch {
       cfgText.textContent = "failed to load";
     }
@@ -193,23 +195,26 @@
   const applyConfig = async () => {
     const y = Math.max(1, Math.min(500, parseInt(yellowInput.value || "3", 10)));
     const r = Math.max(1, Math.min(500, parseInt(redInput.value || "6", 10)));
+    const cSize = Math.max(5, Math.min(200, parseInt(cellInput.value || "10", 10)));
     yellowInput.value = String(y);
     redInput.value = String(r);
+    cellInput.value = String(cSize);
     try {
       const res = await fetch(`${CFG.API_BASE}/config`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ yellowMinCount: y, redMinCount: r }),
+        body: JSON.stringify({ yellowMinCount: y, redMinCount: r, cellSizeM: cSize }),
       });
       if (!res.ok) {
         const t = await res.text();
-        alert(`Failed to update thresholds: ${t}`);
+        alert(`Failed to update config: ${t}`);
         return;
       }
       const c = await res.json();
       yellowInput.value = String(c.yellowMinCount ?? y);
       redInput.value = String(c.redMinCount ?? r);
-      cfgText.textContent = `Yellow ≥ ${yellowInput.value}, Red ≥ ${redInput.value}`;
+      cellInput.value = String(c.cellSizeM ?? cSize);
+      cfgText.textContent = `Yellow ≥ ${yellowInput.value}, Red ≥ ${redInput.value}, Cell: ${cellInput.value}m`;
       alert("Thresholds updated (live).");
     } catch {
       alert("Failed to update thresholds.");
