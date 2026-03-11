@@ -362,12 +362,48 @@
 
   window.focusMarker = (lat, lon, id, type) => {
     map.setView([lat, lon], 17);
-    const cache = markerCache[type];
-    if (cache && cache.has(id)) {
-      cache.get(id).openPopup();
+    if (id && type) {
+      const cache = markerCache[type];
+      if (cache && cache.has(id)) {
+        cache.get(id).openPopup();
+      }
+    } else {
+      L.popup({ closeButton: false })
+        .setLatLng([lat, lon])
+        .setContent(`<div style="font-weight:700">Search result</div><div style="opacity:.85;font-size:12px">Location focused</div>`)
+        .openOn(map);
     }
     closeHistory();
   };
+
+  const search = async (q) => {
+    const url = new URL("https://nominatim.openstreetmap.org/search");
+    url.searchParams.set("format", "json");
+    url.searchParams.set("q", q);
+    url.searchParams.set("limit", "1");
+    url.searchParams.set("addressdetails", "0");
+    const res = await fetch(url.toString(), { headers: { "Accept": "application/json" } });
+    const data = await res.json();
+    if (!Array.isArray(data) || !data[0]) return null;
+    return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), label: data[0].display_name };
+  };
+
+  const searchInput = document.getElementById("searchInput");
+  searchInput.addEventListener("keydown", async (e) => {
+    if (e.key !== "Enter") return;
+    const q = searchInput.value.trim();
+    if (!q) return;
+    try {
+      const r = await search(q);
+      if (!r) {
+        alert("No results found.");
+        return;
+      }
+      focusMarker(r.lat, r.lon);
+    } catch {
+      alert("Search failed.");
+    }
+  });
 
   setInterval(loadEvents, 10000); // refresh pending list
 

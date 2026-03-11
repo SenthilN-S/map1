@@ -26,9 +26,14 @@
   <body>
     <div class="app">
       <div class="topbar">
-        <div class="card" style="flex:1">
-          <div style="font-weight:700">Authority Dashboard</div>
-          <div class="status">Live heatmap, zones, and incident markers.</div>
+        <div class="card" style="display:flex; gap:12px; align-items:center; flex:1">
+          <div style="min-width:140px">
+            <div style="font-weight:700">Authority Panel</div>
+            <div class="status" style="font-size:11px">Live Monitoring</div>
+          </div>
+          <div class="search" style="flex:1; margin:0">
+            <input id="searchInput" type="search" placeholder="Search places (temple, bus stand, stadium…)" />
+          </div>
         </div>
         <button class="btn primary" id="historyBtn">📋 History</button>
         <button class="btn" id="fitBtn">Fit to activity</button>
