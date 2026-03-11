@@ -283,7 +283,7 @@
       const sosList = await res.json();
       historySosEl.innerHTML = sosList.length === 0 ? '<p>No SOS alerts yet.</p>' : 
         sosList.sort((a,b) => b.ts - a.ts).map(s => `
-          <div class="history-item sos ${s.resolved ? 'resolved' : ''}">
+          <div class="history-item sos ${s.resolved ? 'resolved' : ''}" style="cursor:pointer" onclick="focusMarker(${s.lat}, ${s.lon}, '${s.sosId}', 'sos')">
             <h4>🚨 SOS Alert <span class="ts">${new Date(s.ts).toLocaleString()}</span></h4>
             <p><b>Device:</b> ${s.deviceId.substring(0,12)}...</p>
             <p><b>Location:</b> ${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</p>
@@ -358,6 +358,15 @@
     } catch {
       alert("Failed to resolve SOS. Please try again.");
     }
+  };
+
+  window.focusMarker = (lat, lon, id, type) => {
+    map.setView([lat, lon], 17);
+    const cache = markerCache[type];
+    if (cache && cache.has(id)) {
+      cache.get(id).openPopup();
+    }
+    closeHistory();
   };
 
   setInterval(loadEvents, 10000); // refresh pending list
