@@ -172,6 +172,11 @@ async def get_events() -> list[EventRequest]:
     return [EventRequest(**e) for e in events]
 
 
+@app.get("/sos")
+async def get_all_sos_history() -> list[SOSAlert]:
+    sos_alerts = await store.get_all_sos()
+    return [SOSAlert(**s) for s in sos_alerts]
+
 @app.post("/events/{event_id}/status")
 async def update_event_status(event_id: str, payload: dict[str, str]) -> dict[str, Any]:
     status = payload.get("status")

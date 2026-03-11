@@ -72,6 +72,10 @@ class InMemoryStore:
                 return True
             return False
 
+    async def get_all_sos(self) -> list[dict]:
+        async with self._lock:
+            return list(self._sos_alerts.values())
+
     async def prune(self) -> int:
         now = int(time.time() * 1000)
         cutoff = now - (self.cfg.device_ttl_s * 1000)

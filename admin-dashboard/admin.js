@@ -21,6 +21,13 @@
   const sosContainer = document.getElementById("sosContainer");
   const eventsListEl = document.getElementById("eventsList");
 
+  const historyBtn = document.getElementById("historyBtn");
+  const historyDrawer = document.getElementById("historyDrawer");
+  const historyOverlay = document.getElementById("historyOverlay");
+  const closeHistoryBtn = document.getElementById("closeHistoryBtn");
+  const historyEventsEl = document.getElementById("historyEvents");
+  const historySosEl = document.getElementById("historySos");
+
   let lastSnap = null;
   const resolvedSosIds = new Set(); // Track locally resolved SOS IDs
 
@@ -175,6 +182,76 @@
   });
 
   document.getElementById("applyBtn").addEventListener("click", applyConfig);
+
+  // History Logic
+  const openHistory = async () => {
+    historyDrawer.classList.add("active");
+    historyOverlay.classList.add("active");
+    loadHistoryData();
+  };
+
+  const closeHistory = () => {
+    historyDrawer.classList.remove("active");
+    historyOverlay.classList.remove("active");
+  };
+
+  historyBtn.addEventListener("click", openHistory);
+  closeHistoryBtn.addEventListener("click", closeHistory);
+  historyOverlay.addEventListener("click", closeHistory);
+
+  window.switchTab = (tab) => {
+    document.querySelectorAll(".history-tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".history-content").forEach(c => c.style.display = "none");
+    
+    if (tab === 'events') {
+      document.getElementById("tabEvents").classList.add("active");
+      historyEventsEl.style.display = "flex";
+    } else {
+      document.getElementById("tabSos").classList.add("active");
+      historySosEl.style.display = "flex";
+    }
+  };
+
+  const loadHistoryData = async () => {
+    await Promise.all([loadEventHistory(), loadSosHistory()]);
+  };
+
+  const loadEventHistory = async () => {
+    try {
+      const res = await fetch(`${CFG.API_BASE}/events`);
+      const events = await res.json();
+      historyEventsEl.innerHTML = events.length === 0 ? '<p>No event requests yet.</p>' : 
+        events.sort((a,b) => b.eventId.localeCompare(a.eventId)).map(e => `
+          <div class="history-item ${e.status}">
+            <h4>${e.name} <span class="ts">${new Date(e.datetimeStr).toLocaleString()}</span></h4>
+            <p><b>Organizer:</b> ${e.organizer}</p>
+            <p><b>Expected:</b> ${e.participants}</p>
+            <p>${e.description}</p>
+            <span class="status-badge ${e.status}">${e.status}</span>
+          </div>
+        `).join("");
+    } catch {
+      historyEventsEl.innerHTML = '<p class="danger">Failed to load event history.</p>';
+    }
+  };
+
+  const loadSosHistory = async () => {
+    try {
+      const res = await fetch(`${CFG.API_BASE}/sos`);
+      const sosList = await res.json();
+      historySosEl.innerHTML = sosList.length === 0 ? '<p>No SOS alerts yet.</p>' : 
+        sosList.sort((a,b) => b.ts - a.ts).map(s => `
+          <div class="history-item sos ${s.resolved ? 'resolved' : ''}">
+            <h4>🚨 SOS Alert <span class="ts">${new Date(s.ts).toLocaleString()}</span></h4>
+            <p><b>Device:</b> ${s.deviceId.substring(0,12)}...</p>
+            <p><b>Location:</b> ${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</p>
+            <span class="status-badge ${s.resolved ? 'resolved' : 'active-sos'}">${s.resolved ? 'Resolved' : 'Active'}</span>
+          </div>
+        `).join("");
+    } catch {
+      historySosEl.innerHTML = '<p class="danger">Failed to load SOS history.</p>';
+    }
+  };
 
   document.getElementById("clearIncBtn").addEventListener("click", async () => {
     if (!confirm("Clear all incident markers from the map?")) return;
