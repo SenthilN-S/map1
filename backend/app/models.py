@@ -19,6 +19,44 @@ class IncidentReport(BaseModel):
     message: str = Field(default="", max_length=500)
 
 
+class EventRequest(BaseModel):
+    eventId: str
+    name: str = Field(max_length=100)
+    organizer: str = Field(max_length=100)
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    datetimeStr: str = Field(max_length=50) # ISO or local string
+    participants: int = Field(ge=1)
+    description: str = Field(max_length=1000)
+    status: str = Field(default="pending") # pending, approved, declined
+
+
+class EventRequestCreate(BaseModel):
+    name: str = Field(max_length=100)
+    organizer: str = Field(max_length=100)
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    datetimeStr: str = Field(max_length=50)
+    participants: int = Field(ge=1)
+    description: str = Field(max_length=1000)
+
+
+class SOSAlert(BaseModel):
+    sosId: str
+    deviceId: str = Field(min_length=6, max_length=128)
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    ts: int
+    resolved: bool = False
+
+
+class SOSCreate(BaseModel):
+    deviceId: str = Field(min_length=6, max_length=128)
+    lat: float = Field(ge=-90, le=90)
+    lon: float = Field(ge=-180, le=180)
+    pin: str = Field(default="1234")
+
+
 class ZoneCell(BaseModel):
     cellX: int
     cellY: int
@@ -34,6 +72,8 @@ class CrowdSnapshot(BaseModel):
     cellSizeM: int
     zones: list[ZoneCell]
     incidents: list[IncidentReport]
+    events: list[EventRequest] = []
+    sosAlerts: list[SOSAlert] = []
 
 
 class CrowdConfig(BaseModel):

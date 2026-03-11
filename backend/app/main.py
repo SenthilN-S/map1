@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+import time
+import uuid
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 from .crowd import GridConfig, cell_to_center_latlon, density_per_m2, latlon_to_cell, level_for_count, now_ms
-from .models import CrowdConfig, CrowdConfigUpdate, CrowdSnapshot, IncidentReport, LocationPing, ZoneCell
+from .models import CrowdConfig, CrowdConfigUpdate, CrowdSnapshot, IncidentReport, LocationPing, ZoneCell, EventRequestCreate, EventRequest, SOSCreate, SOSAlert
 from .store import InMemoryStore
 
 cfg = GridConfig()
@@ -59,7 +61,7 @@ class Hub:
 hub = Hub()
 
 
-def build_snapshot(devices: dict, incidents: list[dict]) -> CrowdSnapshot:
+def build_snapshot(devices: dict, incidents: list[dict], events: list[dict], sos_alerts: list[dict]) -> CrowdSnapshot:
     # Aggregate into 10m grid cells
     per_cell: dict[tuple[int, int], set[str]] = {}
     lat_hint = 0.0
@@ -90,12 +92,14 @@ def build_snapshot(devices: dict, incidents: list[dict]) -> CrowdSnapshot:
         cellSizeM=cfg.cell_size_m,
         zones=zones,
         incidents=[IncidentReport(**i) for i in incidents],
+        events=[EventRequest(**e) for e in events],
+        sosAlerts=[SOSAlert(**s) for s in sos_alerts],
     )
 
 
 @app.get("/health")
 async def health() -> dict[str, Any]:
-    devices, _ = await store.snapshot()
+    devices, _, _, _ = await store.snapshot()
     return {"ok": True, "activeDevices": len(devices), "cellSizeM": cfg.cell_size_m}
 
 
@@ -143,6 +147,64 @@ async def report(incident: IncidentReport) -> dict[str, Any]:
     return {"ok": True}
 
 
+@app.post("/events")
+async def create_event(req: EventRequestCreate) -> dict[str, Any]:
+    event_id = str(uuid.uuid4())
+    event_dict = req.model_dump()
+    event_dict["eventId"] = event_id
+    event_dict["status"] = "pending"
+    await store.add_event(event_dict)
+    return {"ok": True, "eventId": event_id}
+
+
+@app.get("/events")
+async def get_events() -> list[EventRequest]:
+    events = await store.get_all_events()
+    return [EventRequest(**e) for e in events]
+
+
+@app.post("/events/{event_id}/status")
+async def update_event_status(event_id: str, payload: dict[str, str]) -> dict[str, Any]:
+    status = payload.get("status")
+    if status not in ("approved", "declined"):
+        raise HTTPException(status_code=400, detail="Invalid status")
+    success = await store.update_event_status(event_id, status)
+    if not success:
+        raise HTTPException(status_code=404, detail="Event not found")
+    return {"ok": True}
+
+
+@app.post("/sos")
+async def trigger_sos(req: SOSCreate) -> dict[str, Any]:
+    if req.pin != "1234":
+        raise HTTPException(status_code=403, detail="Invalid PIN")
+    sos_id = str(uuid.uuid4())
+    sos_dict = req.model_dump()
+    sos_dict["sosId"] = sos_id
+    sos_dict["ts"] = int(time.time() * 1000)
+    sos_dict["resolved"] = False
+    await store.add_sos(sos_dict)
+    
+    # Broadcast immediately
+    devices, incidents, approved_events, active_sos = await store.snapshot()
+    snap = build_snapshot(devices, incidents, approved_events, active_sos)
+    await hub.broadcast({"type": "snapshot", "data": snap.model_dump()})
+    
+    return {"ok": True, "sosId": sos_id}
+
+
+@app.post("/sos/{sos_id}/resolve")
+async def resolve_sos(sos_id: str) -> dict[str, Any]:
+    success = await store.resolve_sos(sos_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="SOS not found")
+    # Broadcast resolution immediately
+    devices, incidents, approved_events, active_sos = await store.snapshot()
+    snap = build_snapshot(devices, incidents, approved_events, active_sos)
+    await hub.broadcast({"type": "snapshot", "data": snap.model_dump()})
+    return {"ok": True}
+
+
 @app.websocket("/ws")
 async def ws(ws: WebSocket) -> None:
     await ws.accept()
@@ -168,8 +230,8 @@ async def broadcaster_loop() -> None:
     while True:
         await asyncio.sleep(1.0)
         await store.prune()
-        devices, incidents = await store.snapshot()
-        snap = build_snapshot(devices, incidents)
+        devices, incidents, approved_events, active_sos = await store.snapshot()
+        snap = build_snapshot(devices, incidents, approved_events, active_sos)
         await hub.broadcast({"type": "snapshot", "data": snap.model_dump()})
 
 

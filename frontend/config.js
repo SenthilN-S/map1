@@ -1,7 +1,7 @@
 // Update these when deploying.
 window.CROWD_CONFIG = {
-  WS_URL: "wss://backend-53m1rfs24-senthils2804-5383s-projects.vercel.app/ws",
-  API_BASE: "https://backend-53m1rfs24-senthils2804-5383s-projects.vercel.app",
+  WS_URL: "wss://map1-v5hq.onrender.com/ws",
+  API_BASE: "https://map1-v5hq.onrender.com",
   // How often to send GPS pings (ms)
   PING_EVERY_MS: 3000,
   // Device ID rotation for privacy (ms)

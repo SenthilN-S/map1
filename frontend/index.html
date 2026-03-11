@@ -53,7 +53,42 @@
         <div class="card a11y" aria-label="Accessibility controls">
           <button class="btn" id="contrastBtn">High contrast</button>
           <button class="btn" id="textBtn">Large text</button>
-          <button class="btn danger" id="sosBtn" aria-label="Emergency reporting button">Report emergency</button>
+          <button class="btn primary" id="eventBtn">Request Event / Meetup</button>
+        </div>
+      </div>
+      
+      <button class="sos-float-btn" id="sosFloatBtn" aria-label="Trigger SOS">SOS</button>
+
+      <!-- SOS Modal -->
+      <div class="modal-overlay" id="sosModal" style="display:none">
+        <div class="modal">
+          <h2>🚨 SOS Emergency</h2>
+          <p>Confirm your identity to alert authorities immediately.</p>
+          <input type="password" id="sosPin" placeholder="Enter 4-digit PIN" maxlength="4" />
+          <p class="pin-hint">Default testing PIN: 1234</p>
+          <div class="modal-actions">
+            <button class="btn" id="cancelSosBtn">Cancel</button>
+            <button class="btn danger" id="confirmSosBtn">Send SOS</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Event Modal -->
+      <div class="modal-overlay" id="eventModal" style="display:none">
+        <div class="modal">
+          <h2>Create Event / Meetup</h2>
+          <form id="eventForm">
+            <input type="text" id="eventName" placeholder="Event name" required />
+            <input type="text" id="eventOrg" placeholder="Organizer name" required />
+            <input type="datetime-local" id="eventDate" required />
+            <input type="number" id="eventPax" placeholder="Expected Participants" required min="1" />
+            <textarea id="eventDesc" placeholder="Description" required rows="3"></textarea>
+            <p class="pin-hint">Location will be fetched from the center of your map view.</p>
+            <div class="modal-actions">
+              <button type="button" class="btn" id="cancelEventBtn">Cancel</button>
+              <button type="submit" class="btn primary">Submit Request</button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

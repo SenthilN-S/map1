@@ -15,6 +15,11 @@
   const heat = L.heatLayer([], { radius: 32, blur: 24, maxZoom: 17 }).addTo(map);
   const zones = L.layerGroup().addTo(map);
   const incidents = L.layerGroup().addTo(map);
+  const eventsLayer = L.layerGroup().addTo(map);
+  const sosLayer = L.layerGroup().addTo(map);
+  
+  const sosContainer = document.getElementById("sosContainer");
+  const eventsListEl = document.getElementById("eventsList");
 
   let lastSnap = null;
 
@@ -22,6 +27,8 @@
     lastSnap = snap;
     zones.clearLayers();
     incidents.clearLayers();
+    eventsLayer.clearLayers();
+    sosLayer.clearLayers();
 
     const pts = [];
     let redCount = 0;
@@ -61,6 +68,53 @@
     devicesEl.textContent = String(activeDevices);
     redEl.textContent = String(redCount);
     incEl.textContent = String((snap.incidents || []).length);
+
+    for (const ev of snap.events || []) {
+      if (ev.status === "approved") {
+        L.marker([ev.lat, ev.lon])
+          .bindPopup(`<b>${ev.name}</b><br>Org: ${ev.organizer}<br><i>${new Date(ev.datetimeStr).toLocaleString()}</i><br>${ev.participants} expected<br>${ev.description}`)
+          .addTo(eventsLayer);
+      }
+    }
+
+    const currentSosIds = new Set();
+    for (const sos of snap.sosAlerts || []) {
+      if (!sos.resolved) {
+        currentSosIds.add(sos.sosId);
+        
+        L.circleMarker([sos.lat, sos.lon], {
+          radius: 12, color: "#ffffff", weight: 3, fillColor: "#ff3b30", fillOpacity: 1
+        }).bindPopup(`<b>🚨 SOS ALERT</b><br>Device: ${sos.deviceId.substring(0,8)}...<br>Time: ${new Date(sos.ts).toLocaleTimeString()}`)
+          .addTo(sosLayer);
+          
+        if (!document.getElementById(`sos-pop-${sos.sosId}`)) {
+          const div = document.createElement("div");
+          div.className = "sos-popup";
+          div.id = `sos-pop-${sos.sosId}`;
+          div.innerHTML = `
+            <h3>🚨 SOS ALERT <span>${new Date(sos.ts).toLocaleTimeString()}</span></h3>
+            <p>Immediate assistance required at marked location.</p>
+            <div style="display:flex; justify-content:flex-end">
+              <button class="btn" style="background:#fff; color:#000; outline:none; border:none; padding:8px 16px; border-radius:8px; font-weight:bold" onclick="resolveSos('${sos.sosId}')">MARK RESOLVED</button>
+            </div>
+          `;
+          sosContainer.appendChild(div);
+          
+          try {
+            const u = new SpeechSynthesisUtterance("Emergency SOS received.");
+            window.speechSynthesis.speak(u);
+          } catch {}
+          map.setView([sos.lat, sos.lon], 16);
+        }
+      }
+    }
+    
+    for (const child of Array.from(sosContainer.children)) {
+      const id = child.id.replace("sos-pop-", "");
+      if (!currentSosIds.has(id)) {
+        child.remove();
+      }
+    }
   };
 
   const connectWs = () => {
@@ -121,7 +175,60 @@
 
   document.getElementById("applyBtn").addEventListener("click", applyConfig);
 
+  const loadEvents = async () => {
+    try {
+      const res = await fetch(`${CFG.API_BASE}/events`);
+      const events = await res.json();
+      const pending = events.filter(e => e.status === "pending");
+      
+      if (pending.length === 0) {
+        eventsListEl.innerHTML = '<div style="opacity:0.5; font-size:13px">No pending events.</div>';
+        return;
+      }
+      
+      eventsListEl.innerHTML = pending.map(e => `
+        <div class="event-item">
+          <b>${e.name}</b>
+          <div>Org: ${e.organizer}</div>
+          <div>Pax: ${e.participants}</div>
+          <div>When: ${new Date(e.datetimeStr).toLocaleString()}</div>
+          <div style="opacity:0.8; margin-top:4px">${e.description}</div>
+          <div class="event-actions">
+            <button class="btn primary" onclick="updateEvent('${e.eventId}', 'approved')">Accept</button>
+            <button class="btn" onclick="updateEvent('${e.eventId}', 'declined')">Decline</button>
+          </div>
+        </div>
+      `).join("");
+    } catch {
+      eventsListEl.innerHTML = '<div style="opacity:0.5; font-size:13px; color:var(--danger)">Failed to load events.</div>';
+    }
+  };
+
+  window.updateEvent = async (eventId, status) => {
+    try {
+      await fetch(`${CFG.API_BASE}/events/${eventId}/status`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status })
+      });
+      loadEvents();
+    } catch {
+      alert("Failed to update event status");
+    }
+  };
+
+  window.resolveSos = async (sosId) => {
+    try {
+      await fetch(`${CFG.API_BASE}/sos/${sosId}/resolve`, { method: "POST" });
+    } catch {
+      alert("Failed to resolve SOS.");
+    }
+  };
+
+  setInterval(loadEvents, 10000); // refresh pending list
+
   loadConfig();
+  loadEvents();
   connectWs();
 })();
 

@@ -69,6 +69,7 @@
 
   const heat = L.heatLayer([], { radius: 28, blur: 22, maxZoom: 17 }).addTo(map);
   const zoneLayer = L.layerGroup().addTo(map);
+  const eventLayer = L.layerGroup().addTo(map);
   const routeLayer = L.layerGroup().addTo(map);
   let routeLine = null;
   let target = null;
@@ -179,6 +180,17 @@
     drawRoute();
   };
 
+  const drawEvents = (snap) => {
+    eventLayer.clearLayers();
+    for (const ev of snap.events || []) {
+      if (ev.status === "approved") {
+        const marker = L.marker([ev.lat, ev.lon])
+          .bindPopup(`<b>${ev.name}</b><br>Org: ${ev.organizer}<br><i>${new Date(ev.datetimeStr).toLocaleString()}</i><br>${ev.participants} expected<br>${ev.description}`);
+        eventLayer.addLayer(marker);
+      }
+    }
+  };
+
   const computeLocalRisk = () => {
     if (!lastPos || !lastSnapshot) return { level: "Unknown", nearestRedM: Infinity };
     let nearestRedM = Infinity;
@@ -250,6 +262,7 @@
         if (msg.type === "snapshot") {
           lastSnapshot = msg.data;
           drawZones(lastSnapshot);
+          drawEvents(lastSnapshot);
           maybeAlert();
         }
       } catch {}
@@ -318,28 +331,99 @@
     document.body.classList.toggle("large-text");
   });
 
-  document.getElementById("sosBtn").addEventListener("click", async () => {
-    if (!lastPos) return;
-    const message = prompt("Describe the incident (optional).") || "";
+  // NEW MODAL LOGIC
+  const sosModal = document.getElementById("sosModal");
+  const eventModal = document.getElementById("eventModal");
+
+  // Event Button - Open Modal
+  document.getElementById("eventBtn").addEventListener("click", () => {
+    document.getElementById("eventForm").reset();
+    const nowLocal = new Date();
+    nowLocal.setMinutes(nowLocal.getMinutes() - nowLocal.getTimezoneOffset());
+    document.getElementById("eventDate").value = nowLocal.toISOString().slice(0, 16);
+    eventModal.style.display = "flex";
+  });
+  document.getElementById("cancelEventBtn").addEventListener("click", () => {
+    eventModal.style.display = "none";
+  });
+
+  // Event Form Submit
+  document.getElementById("eventForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!lastPos) {
+      alert("Waiting for GPS location...");
+      return;
+    }
+    const center = map.getCenter();
+    const payload = {
+      name: document.getElementById("eventName").value.trim(),
+      organizer: document.getElementById("eventOrg").value.trim(),
+      lat: center.lat,
+      lon: center.lng,
+      datetimeStr: document.getElementById("eventDate").value,
+      participants: parseInt(document.getElementById("eventPax").value, 10),
+      description: document.getElementById("eventDesc").value.trim()
+    };
+    
+    try {
+      const res = await fetch(`${CFG.API_BASE}/events`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (res.ok) {
+        alert("Event request submitted to admin for approval.");
+        eventModal.style.display = "none";
+      } else {
+        alert("Failed to create event. Try again later.");
+      }
+    } catch (err) {
+      alert("Network error.");
+    }
+  });
+
+  // SOS Button - Open Modal
+  document.getElementById("sosFloatBtn").addEventListener("click", () => {
+    document.getElementById("sosPin").value = "";
+    sosModal.style.display = "flex";
+  });
+  document.getElementById("cancelSosBtn").addEventListener("click", () => {
+    sosModal.style.display = "none";
+  });
+
+  // Confirm SOS
+  document.getElementById("confirmSosBtn").addEventListener("click", async () => {
+    const pin = document.getElementById("sosPin").value;
+    if (pin !== "1234") {
+      alert("Invalid PIN. Default is 1234.");
+      return;
+    }
+    if (!lastPos) {
+      alert("Waiting for GPS location...");
+      return;
+    }
     const payload = {
       deviceId,
       lat: lastPos.lat,
       lon: lastPos.lon,
-      ts: Date.now(),
-      kind: "crowd_incident",
-      message,
+      pin
     };
     try {
-      await fetch(`${CFG.API_BASE}/report`, {
+      const res = await fetch(`${CFG.API_BASE}/sos`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(payload)
       });
-      speak("Emergency report sent.");
-      if (supportsVibrate()) navigator.vibrate([120, 60, 120]);
-      alert("Report sent to authorities dashboard.");
+      if (res.ok) {
+        sosModal.style.display = "none";
+        speak("Emergency SOS sent.");
+        if (supportsVibrate()) navigator.vibrate([120, 60, 120]);
+        alert("SOS Alert activated!");
+      } else {
+        alert("Failed to trigger SOS.");
+      }
     } catch {
-      alert("Failed to send report.");
+      alert("Network error.");
     }
   });
 

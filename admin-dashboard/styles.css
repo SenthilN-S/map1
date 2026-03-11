@@ -91,3 +91,31 @@ body.large-text .search input{font-size:18px;}
 /* Leaflet tweaks */
 .leaflet-control-attribution{display:none;}
 
+/* Events Panel */
+.events-panel {
+  position: absolute; right: 12px; top: 70px; width: 320px;
+  max-height: calc(100% - 150px); overflow-y: auto; z-index: 1000;
+}
+.events-list { display: flex; flex-direction: column; gap: 10px; }
+.event-item {
+  background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;
+  border: 1px solid rgba(255,255,255,0.05); font-size: 13px;
+}
+.event-item b { display: block; font-size: 15px; margin-bottom: 4px; color: var(--text); }
+.event-actions { display: flex; gap: 8px; margin-top: 10px; }
+.event-actions button { padding: 6px 12px; font-size: 12px; flex: 1; }
+
+.sos-container {
+  position: fixed; top: 10px; left: 50%; transform: translateX(-50%);
+  z-index: 2000; display: flex; flex-direction: column; gap: 10px; width: 90%; max-width: 400px;
+}
+.sos-popup {
+  background: var(--danger); color: white; padding: 16px; border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(255,59,48,0.6);
+  animation: slideDown 0.3s ease-out, sosPulse 1s infinite alternate;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.sos-popup h3 { margin: 0; font-size: 18px; display: flex; align-items: center; justify-content: space-between; }
+.sos-popup p { margin: 0; font-size: 14px; opacity: 0.9; }
+@keyframes slideDown { from { transform: translateY(-50px); opacity: 0; } to { transform: translateY(0); opacity: 1; }}
+@keyframes sosPulse { from { box-shadow: 0 0 10px rgba(255,59,48,0.6); } to { box-shadow: 0 0 30px rgba(255,59,48,1); }}
