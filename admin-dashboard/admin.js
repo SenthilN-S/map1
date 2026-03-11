@@ -8,7 +8,10 @@
   const redInput = document.getElementById("redInput");
   const cfgText = document.getElementById("cfgText");
 
-  const map = L.map("map", { zoomControl: false }).setView([13.0827, 80.2707], 13);
+  const map = L.map("map", { 
+    zoomControl: false,
+    closePopupOnClick: false // Prevent closing popups when clicking map
+  }).setView([13.0827, 80.2707], 13);
   L.control.zoom({ position: "bottomright" }).addTo(map);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
 
@@ -31,12 +34,18 @@
   let lastSnap = null;
   const resolvedSosIds = new Set(); // Track locally resolved SOS IDs
 
+  // Persistence Maps
+  const markerCache = {
+    sos: new Map(),
+    incidents: new Map(),
+    events: new Map()
+  };
+
   const draw = (snap) => {
     lastSnap = snap;
     zones.clearLayers();
-    incidents.clearLayers();
-    eventsLayer.clearLayers();
-    sosLayer.clearLayers();
+    // No longer clearing incidents, eventsLayer, or sosLayer here!
+    // We manage them statefully within the draw function.
 
     const pts = [];
     let redCount = 0;
@@ -60,16 +69,89 @@
     }
     heat.setLatLngs(pts);
 
+    // --- INCIDENTS ---
+    const freshIncIds = new Set();
     for (const i of snap.incidents || []) {
-      L.circleMarker([i.lat, i.lon], {
-        radius: 7,
-        color: "#ff9500",
-        weight: 2,
-        fillColor: "#ff9500",
-        fillOpacity: 0.85,
-      }).bindPopup(
-        `<div style="font-weight:700; color:#ff9500">⚠️ INCIDENT</div><div style="opacity:.9">${(i.message || "").replaceAll("<","&lt;")}</div><div style="opacity:.7;font-size:12px">${new Date(i.ts).toLocaleString()}</div>`
-      ).addTo(incidents);
+      const id = `${i.lat}_${i.lon}_${i.ts}`;
+      freshIncIds.add(id);
+      if (!markerCache.incidents.has(id)) {
+        const m = L.circleMarker([i.lat, i.lon], {
+          radius: 7, color: "#ff9500", weight: 2, fillColor: "#ff9500", fillOpacity: 0.85,
+        }).bindPopup(
+          `<div style="font-weight:700; color:#ff9500">⚠️ INCIDENT</div><div style="opacity:.9">${(i.message || "").replaceAll("<","&lt;")}</div><div style="opacity:.7;font-size:12px">${new Date(i.ts).toLocaleString()}</div>`
+        ).addTo(incidents);
+        markerCache.incidents.set(id, m);
+      }
+    }
+    for (const [id, m] of markerCache.incidents) {
+      if (!freshIncIds.has(id)) {
+        incidents.removeLayer(m);
+        markerCache.incidents.delete(id);
+      }
+    }
+
+    // --- EVENTS ---
+    const freshEventIds = new Set();
+    for (const ev of snap.events || []) {
+      if (ev.status === "approved") {
+        freshEventIds.add(ev.eventId);
+        if (!markerCache.events.has(ev.eventId)) {
+          const m = L.marker([ev.lat, ev.lon])
+            .bindPopup(`<b>${ev.name}</b><br>Org: ${ev.organizer}<br><i>${new Date(ev.datetimeStr).toLocaleString()}</i><br>${ev.participants} expected<br>${ev.description}`)
+            .addTo(eventsLayer);
+          markerCache.events.set(ev.eventId, m);
+        }
+      }
+    }
+    for (const [id, m] of markerCache.events) {
+      if (!freshEventIds.has(id)) {
+        eventsLayer.removeLayer(m);
+        markerCache.events.delete(id);
+      }
+    }
+
+    // --- SOS ---
+    const freshSosIds = new Set();
+    for (const sos of snap.sosAlerts || []) {
+      if (!sos.resolved && !resolvedSosIds.has(sos.sosId)) {
+        freshSosIds.add(sos.sosId);
+        if (!markerCache.sos.has(sos.sosId)) {
+          const m = L.circleMarker([sos.lat, sos.lon], {
+            radius: 12, color: "#ffffff", weight: 3, fillColor: "#ff3b30", fillOpacity: 1
+          }).bindPopup(`<b>🚨 SOS ALERT</b><br>Device: ${sos.deviceId.substring(0,8)}...<br>Time: ${new Date(sos.ts).toLocaleTimeString()}`)
+            .addTo(sosLayer);
+          markerCache.sos.set(sos.sosId, m);
+          
+          if (!document.getElementById(`sos-pop-${sos.sosId}`)) {
+            const div = document.createElement("div");
+            div.className = "sos-popup";
+            div.id = `sos-pop-${sos.sosId}`;
+            div.innerHTML = `
+              <h3>🚨 SOS ALERT <span>${new Date(sos.ts).toLocaleTimeString()}</span></h3>
+              <p>Immediate assistance required at marked location.</p>
+              <div style="display:flex; justify-content:flex-end">
+                <button class="btn" style="background:#fff; color:#000; outline:none; border:none; padding:8px 16px; border-radius:8px; font-weight:bold" onclick="resolveSos('${sos.sosId}')">MARK RESOLVED</button>
+              </div>
+            `;
+            sosContainer.appendChild(div);
+            
+            try {
+              const u = new SpeechSynthesisUtterance("Emergency SOS received.");
+              window.speechSynthesis.speak(u);
+            } catch {}
+            map.setView([sos.lat, sos.lon], 16);
+          }
+        } else {
+          // Update position if it changed
+          markerCache.sos.get(sos.sosId).setLatLng([sos.lat, sos.lon]);
+        }
+      }
+    }
+    for (const [id, m] of markerCache.sos) {
+      if (!freshSosIds.has(id)) {
+        sosLayer.removeLayer(m);
+        markerCache.sos.delete(id);
+      }
     }
 
     const activeDevices = (snap.zones || []).reduce((a, z) => a + (z.count || 0), 0);
@@ -77,49 +159,9 @@
     redEl.textContent = String(redCount);
     incEl.textContent = String((snap.incidents || []).length);
 
-    for (const ev of snap.events || []) {
-      if (ev.status === "approved") {
-        L.marker([ev.lat, ev.lon])
-          .bindPopup(`<b>${ev.name}</b><br>Org: ${ev.organizer}<br><i>${new Date(ev.datetimeStr).toLocaleString()}</i><br>${ev.participants} expected<br>${ev.description}`)
-          .addTo(eventsLayer);
-      }
-    }
-
-    const currentSosIds = new Set();
-    for (const sos of snap.sosAlerts || []) {
-      if (!sos.resolved && !resolvedSosIds.has(sos.sosId)) {
-        currentSosIds.add(sos.sosId);
-        
-        L.circleMarker([sos.lat, sos.lon], {
-          radius: 12, color: "#ffffff", weight: 3, fillColor: "#ff3b30", fillOpacity: 1
-        }).bindPopup(`<b>🚨 SOS ALERT</b><br>Device: ${sos.deviceId.substring(0,8)}...<br>Time: ${new Date(sos.ts).toLocaleTimeString()}`)
-          .addTo(sosLayer);
-          
-        if (!document.getElementById(`sos-pop-${sos.sosId}`)) {
-          const div = document.createElement("div");
-          div.className = "sos-popup";
-          div.id = `sos-pop-${sos.sosId}`;
-          div.innerHTML = `
-            <h3>🚨 SOS ALERT <span>${new Date(sos.ts).toLocaleTimeString()}</span></h3>
-            <p>Immediate assistance required at marked location.</p>
-            <div style="display:flex; justify-content:flex-end">
-              <button class="btn" style="background:#fff; color:#000; outline:none; border:none; padding:8px 16px; border-radius:8px; font-weight:bold" onclick="resolveSos('${sos.sosId}')">MARK RESOLVED</button>
-            </div>
-          `;
-          sosContainer.appendChild(div);
-          
-          try {
-            const u = new SpeechSynthesisUtterance("Emergency SOS received.");
-            window.speechSynthesis.speak(u);
-          } catch {}
-          map.setView([sos.lat, sos.lon], 16);
-        }
-      }
-    }
-    
     for (const child of Array.from(sosContainer.children)) {
       const id = child.id.replace("sos-pop-", "");
-      if (!currentSosIds.has(id)) {
+      if (!freshSosIds.has(id)) {
         child.remove();
       }
     }
