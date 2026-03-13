@@ -357,6 +357,14 @@
   document.getElementById("textBtn").addEventListener("click", () => {
     document.body.classList.toggle("large-text");
   });
+  document.getElementById("profileBtn").addEventListener("click", () => {
+    const profile = getUserProfile();
+    if (profile) {
+      document.getElementById("loginName").value = profile.name;
+      document.getElementById("loginPhone").value = profile.phone;
+    }
+    document.getElementById("loginOverlay").style.display = "flex";
+  });
 
   // NEW MODAL LOGIC
   const sosModal = document.getElementById("sosModal");

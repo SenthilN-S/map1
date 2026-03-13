@@ -119,6 +119,16 @@ body.large-text .search input{font-size:18px;}
 }
 .pin-hint { font-size: 13px !important; color: var(--muted) !important; margin: 0; }
 
+/* Login Modal Specifics */
+.login-form { margin-top: 16px; }
+.input-group {
+  display: flex; flex-direction: column; gap: 6px; margin-bottom: 14px;
+}
+.input-group label {
+  font-size: 14px; font-weight: 600; color: var(--text);
+}
+.full-width { width: 100%; margin-top: 8px; font-weight: bold; }
+
 /* SOS Float Button */
 .sos-float-btn {
   position: fixed; top: 70px; right: 12px; z-index: 1000;
