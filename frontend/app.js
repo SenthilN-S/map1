@@ -53,6 +53,33 @@
   let lastSnapshot = null;
   let lastDangerSpokenAt = 0;
 
+  // USER PROFILE LOGIC
+  const getUserProfile = () => {
+    const raw = localStorage.getItem("user_profile");
+    return raw ? JSON.parse(raw) : null;
+  };
+
+  const checkLogin = () => {
+    const profile = getUserProfile();
+    const loginOverlay = document.getElementById("loginOverlay");
+    if (!profile) {
+      loginOverlay.style.display = "flex";
+    } else {
+      loginOverlay.style.display = "none";
+    }
+  };
+
+  document.getElementById("loginBtn").addEventListener("click", () => {
+    const name = document.getElementById("loginName").value.trim();
+    const phone = document.getElementById("loginPhone").value.trim();
+    if (!name || !phone) {
+      alert("Please fill in both name and phone number.");
+      return;
+    }
+    localStorage.setItem("user_profile", JSON.stringify({ name, phone }));
+    document.getElementById("loginOverlay").style.display = "none";
+  });
+
   const map = L.map("map", { zoomControl: false }).setView([13.0827, 80.2707], 13);
   L.control.zoom({ position: "bottomright" }).addTo(map);
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -402,8 +429,11 @@
       alert("Waiting for GPS location...");
       return;
     }
+    const profile = getUserProfile();
     const payload = {
       deviceId,
+      userName: profile?.name || "Unknown",
+      userPhone: profile?.phone || "Unknown",
       lat: lastPos.lat,
       lon: lastPos.lon,
       pin
@@ -433,6 +463,7 @@
   }
 
   // Start
+  checkLogin();
   startGeolocation();
   connectWs();
   setRisk("Unknown");

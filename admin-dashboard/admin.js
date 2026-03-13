@@ -119,7 +119,7 @@
         if (!markerCache.sos.has(sos.sosId)) {
           const m = L.circleMarker([sos.lat, sos.lon], {
             radius: 12, color: "#ffffff", weight: 3, fillColor: "#ff3b30", fillOpacity: 1
-          }).bindPopup(`<b>🚨 SOS ALERT</b><br>Device: ${sos.deviceId.substring(0,8)}...<br>Time: ${new Date(sos.ts).toLocaleTimeString()}`)
+          }).bindPopup(`<b>🚨 SOS ALERT</b><br>User: ${sos.userName || 'Unknown'}<br>Phone: ${sos.userPhone || 'N/A'}<br>Device: ${sos.deviceId.substring(0,8)}...<br>Time: ${new Date(sos.ts).toLocaleTimeString()}`)
             .addTo(sosLayer);
           markerCache.sos.set(sos.sosId, m);
           
@@ -129,6 +129,7 @@
             div.id = `sos-pop-${sos.sosId}`;
             div.innerHTML = `
               <h3>🚨 SOS ALERT <span>${new Date(sos.ts).toLocaleTimeString()}</span></h3>
+              <p><b>User:</b> ${sos.userName || 'Unknown'}<br><b>Phone:</b> ${sos.userPhone || 'N/A'}</p>
               <p>Immediate assistance required at marked location.</p>
               <div style="display:flex; justify-content:flex-end">
                 <button class="btn" style="background:#fff; color:#000; outline:none; border:none; padding:8px 16px; border-radius:8px; font-weight:bold" onclick="resolveSos('${sos.sosId}')">MARK RESOLVED</button>
@@ -290,6 +291,7 @@
         sosList.sort((a,b) => b.ts - a.ts).map(s => `
           <div class="history-item sos ${s.resolved ? 'resolved' : ''}" style="cursor:pointer" onclick="focusMarker(${s.lat}, ${s.lon}, '${s.sosId}', 'sos')">
             <h4>🚨 SOS Alert <span class="ts">${new Date(s.ts).toLocaleString()}</span></h4>
+            <p><b>User:</b> ${s.userName || 'Unknown'} (${s.userPhone || 'N/A'})</p>
             <p><b>Device:</b> ${s.deviceId.substring(0,12)}...</p>
             <p><b>Location:</b> ${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</p>
             <span class="status-badge ${s.resolved ? 'resolved' : 'active-sos'}">${s.resolved ? 'Resolved' : 'Active'}</span>

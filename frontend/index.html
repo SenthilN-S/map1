@@ -90,6 +90,23 @@
             </div>
           </form>
         </div>
+      <!-- Login Overlay -->
+      <div class="modal-overlay" id="loginOverlay" style="display:none">
+        <div class="modal login-modal">
+          <h2>Welcome to CrowdSafe</h2>
+          <p>Please provide your details for emergency identification.</p>
+          <div class="login-form">
+            <div class="input-group">
+              <label for="loginName">Full Name</label>
+              <input type="text" id="loginName" placeholder="Enter your name" required />
+            </div>
+            <div class="input-group">
+              <label for="loginPhone">Phone Number</label>
+              <input type="tel" id="loginPhone" placeholder="Enter your mobile number" required />
+            </div>
+            <button class="btn primary full-width" id="loginBtn">Start Using CrowdSafe</button>
+          </div>
+        </div>
       </div>
     </div>
   </body>

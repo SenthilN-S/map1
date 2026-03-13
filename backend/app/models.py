@@ -44,6 +44,8 @@ class EventRequestCreate(BaseModel):
 class SOSAlert(BaseModel):
     sosId: str
     deviceId: str = Field(min_length=6, max_length=128)
+    userName: str | None = None
+    userPhone: str | None = None
     lat: float = Field(ge=-90, le=90)
     lon: float = Field(ge=-180, le=180)
     ts: int
@@ -52,6 +54,8 @@ class SOSAlert(BaseModel):
 
 class SOSCreate(BaseModel):
     deviceId: str = Field(min_length=6, max_length=128)
+    userName: str | None = None
+    userPhone: str | None = None
     lat: float = Field(ge=-90, le=90)
     lon: float = Field(ge=-180, le=180)
     pin: str = Field(default="1234")
